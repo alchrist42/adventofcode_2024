@@ -1,5 +1,5 @@
-DIAG_K = ((-1, -1), (-1, 1), (1, 1), (1, -1))
-LINE_K = ((-1, 0), (0, -1), (0, 1), (1, 0))
+DIAG_K = ((1, 1), (1, -1), (-1, -1), (-1, 1))
+LINE_K = ((0, 1), (1, 0), (0, -1), (-1, 0))
 
 def nbs(data: list[list[any]], row: int, col: int, line=True, diag=True,  coord=False) -> list | dict:
     """return neigboards values [coordinates]"""
