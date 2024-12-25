@@ -1,6 +1,8 @@
 #!/bin/sh
 
-# for i in {4..25}; do cp template.py $i.py; done
-# touch {1..25}.txt
-# touch {1..25}_temp.txt
-
+for i in {21..25}; do
+    mkdir $i
+    cp template.py $i/main.py
+    touch $i/test.txt
+    touch $i/input.txt
+done

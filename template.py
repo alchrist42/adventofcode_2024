@@ -16,7 +16,7 @@ def solve(data: list[list[str]]):
 
 
 
-for file, want, *args in (("test", 51), ("input", None)):
+for file, want, *args in (("test", 0), ("input", None),):
     with open(f"{Path(__file__).parent}/{file}.txt") as f:
         blocks = [block.split("\n") for block in f.read().split("\n\n")]
     print(f"---- {file} -----\nData shapes:", [(len(b), len(b[0])) for b in blocks])
