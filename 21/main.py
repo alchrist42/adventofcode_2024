@@ -1,86 +1,93 @@
-import re
-import sys, os
+from functools import cache
 from pathlib import Path
-from itertools import permutations, combinations, product
+from itertools import pairwise
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from utils import nbs
 
-NKB = {"7": (0, 0), "8": (0, 1), "9": (0, 2),
-       "4": (1, 0), "5": (1, 1), "6": (1, 2),
-       "1": (2, 0), "2": (2, 1), "3": (2, 2),
-       " ": (3, 0), "0": (3, 1), "A": (3, 2),}
+NKB = {
+    "7": (0, 0),
+    "8": (0, 1),
+    "9": (0, 2),
+    "4": (1, 0),
+    "5": (1, 1),
+    "6": (1, 2),
+    "1": (2, 0),
+    "2": (2, 1),
+    "3": (2, 2),
+    " ": (3, 0),
+    "0": (3, 1),
+    "A": (3, 2),
+}
+NKBR = {val: key for key, val in NKB.items()}
 
 DKB = {
-    " ": (0, 0), "^": (0, 1), "A": (0, 2),
-    "<": (1, 0), "v": (1, 1), ">": (1, 2),
+    " ": (0, 0),
+    "^": (0, 1),
+    "A": (0, 2),
+    "<": (1, 0),
+    "v": (1, 1),
+    ">": (1, 2),
 }
-
-POS_DKB = {
-    
-}
-
-def way_nkb(a, b):
-    dx, dy = NKB[b][0] - NKB[a][0], NKB[b][1] - NKB[a][1]
-    steps = []
-    if dy > 0:
-        steps.extend([">"] * abs(dy))
-    if dx < 0:
-        steps.extend(["^"] * abs(dx))
-    if dx > 0:
-        steps.extend(["v"] * abs(dx))
-    if dy < 0:
-        steps.extend(["<"] * abs(dy))
-    variants = [tuple((*v, "A")) for v in set(permutations(steps))]
-    return variants
-
-def way_dkb(a, b):
-    dx, dy = DKB[b][0] - DKB[a][0], DKB[b][1] - DKB[a][1]
-    steps = []
-    if dx < 0:
-        steps.extend(["^"] * abs(dx))
-    if dx > 0:
-        steps.extend(["v"] * abs(dx))
-    if dy > 0:
-        steps.extend([">"] * abs(dy))
-    if dy < 0:
-        steps.extend(["<"] * abs(dy))
-    steps.append("A")
-    return ''.join(steps)
+DKBR = {val: key for key, val in DKB.items()}
 
 
-# part 1
-def solve(data: list[list[str]]):
+def paths_on_kb(a, b, dct, dctr):
+    if a == b:
+        return "A"
+    if a == " ":
+        return ()
+    dx, dy = dct[b][0] - dct[a][0], dct[b][1] - dct[a][1]
+    res = []
+    if dx:
+        a_new = dctr[(dct[a][0] + dx // abs(dx), dct[a][1])]
+        paths = [("v" if dx > 0 else "^") + s for s in paths_on_kb(a_new, b, dct, dctr)]
+        res.extend(paths)
+    if dy:
+        a_new = dctr[(dct[a][0], dct[a][1] + dy // abs(dy))]
+        paths = [(">" if dy > 0 else "<") + s for s in paths_on_kb(a_new, b, dct, dctr)]
+        res.extend(paths)
+    return tuple(res)
+
+
+@cache
+def find_shortest_path(paths: tuple[tuple], cnt_panels: int) -> int:
+    if not cnt_panels:
+        return min(len(path) for path in paths)
+    ans = float("inf")
+    for path in paths:
+        path_res = 0
+        for a, b in pairwise("A" + path):
+            possible_paths = paths_on_kb(a, b, DKB, DKBR)
+            path_res += find_shortest_path(possible_paths, cnt_panels - 1)
+        ans = min(ans, path_res)
+    return ans
+
+
+# parts 1/2
+def solve(data: list[list[str]], cnt_panels=2):
     res = 0
-    for line in data[0]:
-        # path n1
-        paths_n1 = way_nkb("A", line[0])
-        for i in range(1, len(line)):
-            paths_n1 = product(paths_n1, way_nkb(line[i - 1], line[i]))
-        # path d1
-        path_d1 = way_dkb("A", path_n1[0])
-        for i in range(1, len(path_n1)):
-            path_d1 += way_dkb(path_n1[i - 1], path_n1[i])
-        # path d2
-        path_d2 = way_dkb("A", path_d1[0])
-        for i in range(1, len(path_d1)):
-            path_d2 += way_dkb(path_d1[i - 1], path_d1[i])
-        
-        n = int(re.findall(r"\d+", line)[0])
-        print(path_n1, path_d1, path_d2, n, len(path_d2), sep="\n")
-        res += n * len(path_d2)
-
+    for path in data[0]:
+        path_res = 0
+        for a, b in pairwise("A" + path):
+            possible_paths = paths_on_kb(a, b, NKB, NKBR)
+            path_res += find_shortest_path(possible_paths, cnt_panels)
+            # print(f"{a} -> {b}: {possible_paths}")
+        print(f"{path}: {path_res}")
+        res += path_res * int(path[:-1])
     return res
 
 
-# part 2
-
-
-
-for file, want, *args in (("test", 126384), ("input", None)):
+# for file, want, *args in (("test", 126384, 2), ("input", 156714, 2)):
+for file, want, *args in (
+    ("test", 154115708116294, 25),
+    ("input", None, 25),
+):
     with open(f"{Path(__file__).parent}/{file}.txt") as f:
         blocks = [block.split("\n") for block in f.read().split("\n\n")]
     print(f"---- {file} -----\nData shapes:", [(len(b), len(b[0])) for b in blocks])
     res = solve(blocks, *args)
     assert want is None or res == want, f"{res}, expected {want}"
     print(f"Result:", res)
+
+# 116545391649612
+# 191139369248202
+# 283789714418874
